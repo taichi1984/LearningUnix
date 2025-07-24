@@ -6,6 +6,7 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include<stdlib.h>
+#include "utmplib.c"
 
 #define SHOWHOST
 void show_info(struct utmp *utbufp);
@@ -14,21 +15,19 @@ void showtime( long timeval );
 
 int main()
 {
-  struct utmp current_record;
-  int utmpfd;
-  int reclen = sizeof(current_record);
+  
+  struct utmp *utbufp;
 
-  if(( utmpfd = open(UTMP_FILE, O_RDONLY)) == -1 ){
-    perror( UTMP_FILE );
+  if (utmp_open( UTMP_FILE ) == -1){
+    perror(UTMP_FILE);
     exit(1);
   }
 
-  while ( read(utmpfd, &current_record , reclen) == reclen)
-    show_info(&current_record);
-  close(utmpfd);
+  while( ( utbufp = utmp_next() ) != (( struct utmp * ) NULL ) )
+    show_info( utbufp );
+  utmp_close();
   return 0;
 }
-
 void show_info(struct utmp *utbufp)
 {
   if( utbufp-> ut_type != USER_PROCESS)

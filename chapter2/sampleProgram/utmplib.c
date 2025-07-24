@@ -13,6 +13,7 @@
 #include<fcntl.h>
 #include<sys/types.h>
 #include<utmp.h>
+#include<unistd.h>
 
 #define NRECS   16
 #define NULLUT  ((struct utmp *)NULL)
@@ -20,16 +21,49 @@
 
 static char utmpbuf[NRECS * UTSIZE];  // メモリ領域、NRECS個の構造体を一次保存するバッファ
 static int num_recs;  //格納してある個数
-static int cur_red;   // 次のレコード番号
+static int cur_rec;   // 次のレコード番号
 static int fd_utmp = -1;  //読み出し先
 
+int utmp_reload();
 
-utmp_open( char *filename)
+int utmp_open( char *filename)
 {
   fd_utmp = open( filename , O_RDONLY);
   cur_rec = num_recs = 0;
   return fd_utmp;
 }
+
+struct utmp *utmp_next()
+{
+  struct utmp *recp;
+
+  if( fd_utmp == -1 )
+      return NULLUT;
+  if( cur_rec == num_recs && utmp_reload() == 0 )
+      return NULLUT;
+    
+ recp = ( struct utmp  *) &utmpbuf[cur_rec * UTSIZE];
+ cur_rec++;
+ return recp;
+}
+
+int utmp_reload()
+{
+  int amt_read;
+
+  amt_read = read( fd_utmp, utmpbuf , NRECS * UTSIZE);
+  
+  num_recs = amt_read/UTSIZE;
+  cur_rec = 0;
+  return num_recs;
+}
+
+void utmp_close()
+{
+  if( fd_utmp != -1)
+    close( fd_utmp );
+}
+
 
 
 

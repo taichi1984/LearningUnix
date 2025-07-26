@@ -1,0 +1,21 @@
+#include<stdio.h>
+
+int main()
+{
+  FILE *fp = fopen("sample.txt","r");
+  int i;
+  for(i=0 ; i < 20 ; i++)
+  {
+    printf("%c \n" , getc(fp));
+  }
+
+  fclose(fp);
+
+
+
+
+
+
+
+}
+

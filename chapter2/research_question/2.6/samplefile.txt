@@ -1,0 +1,16 @@
+I want write this sejumps over the lazy dog.  
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.  
+hello world! Hello World! HELLO WORLD!  
+User ID: 12345, Email: user@example.com  
+Whitespace     should    be   normalized.  
+Repeated repeated repeated words should be detected.  
+Symbols: !@#$%^&*()_+-=[]{}|;':",./<>?  
+Tabs	are	here	and	should	be	handled.  
+Trailing spaces should be removed.     
+Lines  
+with  
+empty  
+
+breaks should be handled.
+
+End of sample.

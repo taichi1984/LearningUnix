@@ -27,6 +27,8 @@ int main() {
   return 0;
 }
 void show_info(struct utmp *utbufp) {
+ /* if (utbufp->ut_type != USER_PROCESS)
+    return; この部分はutmplib.cが受け持つようになったため不要なので削除*/
   printf("%-8.8s", utbufp->ut_name);
   printf(" ");
   printf("%-8.8s", utbufp->ut_line);

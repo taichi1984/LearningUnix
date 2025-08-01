@@ -7,6 +7,8 @@
  *    eofのときにはNULLを返す。
  *   utmp_close() - ファイルを閉じる
  *
+ *   utmp_seek(record_offset , base) - utmp構造体のリストから基準位置からrecord_offset個先の位置までポインタの位置をずらす。
+ *
  *   一度の読み出しでNRECS個の構造体を読み出し、バッファから構造体を１つずつ提供する。*/
 
 #include <fcntl.h>
@@ -58,25 +60,34 @@ int utmp_reload() {
 }
 
 void utmp_close() {
-  if (fd_utmp != -1)
+  if (fd_utmp != -1){
     close(fd_utmp);
+    fd_utmp = -1;
+  }
+  
 }
 
-int utmp_seek(int record_offset, int base) {
-  if (fd_utmp == -1)
+off_t utmp_seek(int record_offset, int base) {
+  if (fd_utmp == -1) {
+    perror("ファイルディスクリプタが不正です");
     return -1;
-
-  switch (base) {
-  case SEEK_SET:
-    lseek(fd_utmp, UTSIZE * record_offset, SEEK_SET);
-    break;
-  case SEEK_CUR:
-    lseek(fd_utmp, UTSIZE * record_offset, SEEK_CUR);
-    break;
-  case SEEK_END:
-    lseek(fd_utmp, UTSIZE * record_offset, SEEK_END);
-    break;
-  default:
-    break;
   }
+  
+  if(base != SEEK_SET && base != SEEK_CUR && base != SEEK_END)
+  {
+    perror("第２引数baseが既定の値ではありません。");
+    return(-1);
+  }
+
+  if(lseek(fd_utmp, UTSIZE * record_offset , base) == -1)
+  {
+    perror("不正なシーク");
+    return -1;
+  }
+  
+
+  num_recs = 0;
+  cur_rec = 0;
+
+  return lseek(fd_utmp, 0, SEEK_CUR);
 }

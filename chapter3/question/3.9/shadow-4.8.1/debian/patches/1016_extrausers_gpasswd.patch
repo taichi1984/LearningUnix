@@ -1,0 +1,50 @@
+From bea0ec0e35d7417b258dcbf85c700e204afd1a1e Mon Sep 17 00:00:00 2001
+From: Marcus Tomlinson <marcus.tomlinson@canonical.com>
+Date: Wed, 21 Oct 2020 13:18:01 +0100
+Subject: add extrausers flag
+
+---
+ src/gpasswd.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+--- a/src/gpasswd.c
++++ b/src/gpasswd.c
+@@ -123,6 +123,10 @@
+ static void log_gpasswd_success_system (/*@null@*/unused void *arg);
+ static void log_gpasswd_success_group (/*@null@*/unused void *arg);
+ 
++#ifndef EXTRAUSERS_OPT
++#define EXTRAUSERS_OPT 100000
++#endif
++
+ /*
+  * usage - display usage message
+  */
+@@ -141,6 +145,7 @@
+ 	(void) fputs (_("  -r, --remove-password         remove the GROUP's password\n"), usageout);
+ 	(void) fputs (_("  -R, --restrict                restrict access to GROUP to its members\n"), usageout);
+ 	(void) fputs (_("  -M, --members USER,...        set the list of members of GROUP\n"), usageout);
++	(void) fputs (_("      --extrausers              use the extra users database\n"), usageout);
+ #ifdef SHADOWGRP
+ 	(void) fputs (_("  -A, --administrators ADMIN,...\n"
+ 	                "                                set the list of administrators for GROUP\n"), usageout);
+@@ -238,12 +243,19 @@
+ 		{"root",            required_argument, NULL, 'Q'},
+ 		{"remove-password", no_argument,       NULL, 'r'},
+ 		{"restrict",        no_argument,       NULL, 'R'},
++		{"extrausers",      no_argument,       NULL, EXTRAUSERS_OPT},
+ 		{NULL, 0, NULL, '\0'}
+ 		};
+ 
+ 	while ((c = getopt_long (argc, argv, "a:A:d:ghM:Q:rR",
+ 	                         long_options, NULL)) != -1) {
+ 		switch (c) {
++		case EXTRAUSERS_OPT:
++			gr_setdbname (EXTRAUSERS_GROUP_FILE);
++#ifdef SHADOWGRP
++			sgr_setdbname (EXTRAUSERS_SHADOWGROUP_FILE);
++#endif
++			break;
+ 		case 'a':	/* add a user */
+ 			aflg = true;
+ 			user = optarg;

@@ -1,0 +1,32 @@
+#!/bin/sh
+
+set -e
+
+# smoke test for {user,group}{add,del}
+mkdir -p /var/lib/extrausers
+
+echo "Adding an user works"
+useradd shadow-test-user
+grep '^shadow-test-user:x:' /etc/passwd
+grep '^shadow-test-user:!:' /etc/shadow
+# nothing got added to the extrausers
+! grep 'shadow-test-user' /var/lib/extrausers/passwd
+! grep 'shadow-test-user' /var/lib/extrausers/shadow
+
+echo "Removing an user works"
+userdel shadow-test-user
+! grep 'shadow-test-user' /etc/passwd
+! grep 'shadow-test-user' /etc/shadow
+
+echo "Adding an extrauser works"
+useradd --extrausers shadow-test-user
+grep '^shadow-test-user:x:' /var/lib/extrausers/passwd
+grep '^shadow-test-user:!:' /var/lib/extrausers/shadow
+# nothing got added to the system
+! grep 'shadow-test-user' /etc/passwd
+! grep 'shadow-test-user' /etc/shadow
+
+echo "Removing an extrauser works"
+userdel --extrausers shadow-test-user
+! grep 'shadow-test-user' /var/lib/extrausers/passwd
+! grep 'shadow-test-user' /var/lib/extrausers/passwd

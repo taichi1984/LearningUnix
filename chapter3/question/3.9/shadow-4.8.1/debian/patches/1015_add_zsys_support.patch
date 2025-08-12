@@ -1,0 +1,188 @@
+From: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Date: Fri, 29 Jun 2018 17:22:06 +0200
+Subject: Call zsys to handle home directory if available
+
+We call zsys to handle dataset creation for zsys system in a separate home
+dataset for each user on the system.
+This allows one to handle user dataset outside of /home and also renaming.
+We don't handle with system users (uid < 1000) as we consider them by default
+as part of the system.
+We don't support yet deletion, as removing the dataset would remove as well
+every snapshot of the history, and so, revert to previous version will result
+in user created, but no home directory, which is unwanted.
+Forwarded: not-needed
+Origin: ubuntu
+---
+ src/useradd.c | 43 ++++++++++++++++++++++++++++++++++++++++++-
+ src/usermod.c | 36 +++++++++++++++++++++++++++++++++++-
+ 2 files changed, 77 insertions(+), 2 deletions(-)
+
+--- a/src/useradd.c
++++ b/src/useradd.c
+@@ -2084,6 +2084,13 @@
+  */
+ static void create_home (void)
+ {
++	const char zsys[] = "/sbin/zsysctl";
++	const char *pname = "zsysctl";
++	pid_t childpid;
++	int devnull_fd;
++	int zsys_failed;
++	int zsys_status;
++
+ 	if (access (prefix_user_home, F_OK) != 0) {
+ 		char path[strlen (prefix_user_home) + 2];
+ 		char *bhome, *cp;
+@@ -2159,6 +2166,7 @@
+ #endif
+ 			fail_exit (E_HOMEDIR);
+ 		}
++
+ 				if (chown (path, 0, 0) < 0) {
+ 					fprintf (stderr,
+ 									_("%s: warning: chown on `%s' failed: %m\n"),
+@@ -2169,6 +2177,47 @@
+ 									_("%s: warning: chmod on `%s' failed: %m\n"),
+ 									Prog, path);
+ 				}
++
++				// We don't create zsys user dataset for system users
++				zsys_failed = 0;
++				if (user_id < 1000) {
++					zsys_failed = 1;
++				} else {
++					zsys_failed = 0;
++					// Do a first chown before we prepare the mountpoint
++					if (chown (prefix_user_home, user_id, user_gid) < 0) {
++						fprintf (stderr,
++										_("%s: warning: chown on `%s' failed: %m\n"),
++										Prog, prefix_user_home);
++					}
++					switch (childpid = fork())
++					{
++					case -1: /* error */
++						zsys_failed = 1;
++						break;
++					case 0:							  /* child */
++						devnull_fd = open("/dev/null", O_WRONLY);
++						if (devnull_fd == -1) {
++							perror("can't open /dev/null");
++							exit(3);
++						}
++						// don't print zsys stdout and stderr
++						if (dup2(devnull_fd, 1) == -1 || (dup2(devnull_fd, 2) == -1)) {
++							exit(3);
++						}
++						execl(zsys, pname, "userdata", "create", user_name, path, NULL);
++						/* If we come here, something has gone terribly wrong */
++						perror(zsys);
++						exit(42); /* don't continue, we now have 2 processes running! */
++						/* NOTREACHED */
++						break;
++					default: /* parent */
++						if (waitpid(childpid, &zsys_status, 0) == -1 || !WIFEXITED(zsys_status) || WEXITSTATUS(zsys_status) != 0)
++							zsys_failed = 1;
++						break;
++					}
++				}
++
+ 			}
+ 			cp = strtok (NULL, "/");
+ 		}
+--- a/src/usermod.c
++++ b/src/usermod.c
+@@ -1849,6 +1849,12 @@
+ static void move_home (void)
+ {
+ 	struct stat sb;
++	const char zsys[] = "/sbin/zsysctl";
++	const char *pname = "zsysctl";
++	int devnull_fd;
++	pid_t childpid;
++	int zsys_failed;
++	int zsys_status;
+ 
+ 	if (access (prefix_user_newhome, F_OK) == 0) {
+ 		/*
+@@ -1883,7 +1889,35 @@
+ 		}
+ #endif
+ 
+-		if (rename (prefix_user_home, prefix_user_newhome) == 0) {
++		zsys_failed = 0;
++		switch (childpid = fork())
++		{
++		case -1: /* error */
++			zsys_failed = 1;
++			break;
++		case 0: /* child */
++			devnull_fd = open("/dev/null", O_WRONLY);
++			if (devnull_fd == -1){
++				perror("can't open /dev/null");
++				exit(3);
++			}
++			// don't print zsys stdout and stderr
++			if (dup2(devnull_fd, 1) == -1 || (dup2(devnull_fd, 2) == -1)) {
++				exit(3);
++			}
++			execl(zsys, pname, "userdata", "set-home", prefix_user_home, prefix_user_newhome, NULL);
++			/* If we come here, something has gone terribly wrong */
++			perror(zsys);
++			exit(42); /* don't continue, we now have 2 processes running! */
++			/* NOTREACHED */
++			break;
++		default: /* parent */
++			if (waitpid(childpid, &zsys_status, 0) == -1 || !WIFEXITED(zsys_status) || WEXITSTATUS(zsys_status) != 0)
++				zsys_failed = 1;
++			break;
++		}
++
++		if (zsys_failed == 0 || rename (prefix_user_home, prefix_user_newhome) == 0) {
+ 			/* FIXME: rename above may have broken symlinks
+ 			 *        pointing to the user's home directory
+ 			 *        with an absolute path. */
+--- a/src/userdel.c
++++ b/src/userdel.c
+@@ -1296,6 +1296,42 @@
+ 	}
+ #endif				/* EXTRA_CHECK_HOME_DIR */
+ 
++	/* ZSys support: always dissociate dataset, even if we don’t delete the content */
++	if (user_id >= 1000) {
++		const char zsys[] = "/sbin/zsysctl";
++		const char *pname = "zsysctl";
++		pid_t childpid;
++		int devnull_fd;
++		int zsys_status;
++		switch (childpid = fork())
++		{
++		case -1: /* error */
++			break;
++		case 0:							  /* child */
++			devnull_fd = open("/dev/null", O_WRONLY);
++			if (devnull_fd == -1) {
++				perror("can't open /dev/null");
++				exit(3);
++			}
++			// don't print ZSys stdout and stderr
++			if (dup2(devnull_fd, 1) == -1 || (dup2(devnull_fd, 2) == -1)) {
++				exit(3);
++			}
++			if (rflg)
++				execl(zsys, pname, "userdata", "dissociate", "--remove", user_name, NULL);
++			else
++				execl(zsys, pname, "userdata", "dissociate", user_name, NULL);
++			/* If we come here, something has gone terribly wrong */
++			perror(zsys);
++			exit(42); /* don't continue, we now have 2 processes running! */
++			/* NOTREACHED */
++			break;
++		default: /* parent */
++			waitpid(childpid, &zsys_status, 0);
++			break;
++		}
++	}
++
+ 	if (rflg) {
+ #ifdef WITH_BTRFS
+ 		int is_subvolume = btrfs_is_subvolume (user_home);

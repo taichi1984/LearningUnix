@@ -1,0 +1,8 @@
+debian/login.defs etc
+debian/source_shadow.py usr/share/apport/package-hooks
+usr/share/locale/*/LC_MESSAGES/shadow.mo
+usr/sbin/nologin
+usr/bin/faillog
+usr/bin/lastlog
+usr/bin/newgrp
+bin/login

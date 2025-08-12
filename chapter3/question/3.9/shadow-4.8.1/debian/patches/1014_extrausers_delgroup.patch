@@ -1,0 +1,71 @@
+From: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Date: Fri, 20 Dec 2019 16:45:51 +0100
+Subject: _extrausers_delgroup
+
+===================================================================
+---
+ src/groupdel.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/src/groupdel.c b/src/groupdel.c
+index f941a84..7487582 100644
+--- a/src/groupdel.c
++++ b/src/groupdel.c
+@@ -87,6 +87,12 @@ static void open_files (void);
+ static void group_busy (gid_t gid);
+ static void process_flags (int argc, char **argv);
+ 
++#ifndef EXTRAUSERS_OPT
++#define EXTRAUSERS_OPT 100000
++#endif
++
++static bool use_extrausers = false;
++
+ /*
+  * usage - display usage message and exit
+  */
+@@ -102,6 +108,7 @@ static /*@noreturn@*/void usage (int status)
+ 	(void) fputs (_("  -R, --root CHROOT_DIR         directory to chroot into\n"), usageout);
+ 	(void) fputs (_("  -P, --prefix PREFIX_DIR       prefix directory where are located the /etc/* files\n"), usageout);
+ 	(void) fputs (_("  -f, --force                   delete group even if it is the primary group of a user\n"), usageout);
++        (void) fputs (_("      --extrausers              Use the extra users database\n"), usageout);
+ 	(void) fputs ("\n", usageout);
+ 	exit (status);
+ }
+@@ -325,6 +332,7 @@ static void process_flags (int argc, char **argv)
+ 		{"help", no_argument,       NULL, 'h'},
+ 		{"root", required_argument, NULL, 'R'},
+ 		{"prefix", required_argument, NULL, 'P'},
++		{"extrausers", no_argument, NULL, EXTRAUSERS_OPT},
+ 		{NULL, 0, NULL, '\0'}
+ 	};
+ 
+@@ -341,6 +349,9 @@ static void process_flags (int argc, char **argv)
+ 		case 'f':
+ 			check_group_busy = false;
+ 			break;
++		case EXTRAUSERS_OPT:
++			use_extrausers = true;
++			break;
+ 		default:
+ 			usage (E_USAGE);
+ 		}
+@@ -482,6 +493,18 @@ int main (int argc, char **argv)
+ 		group_busy (group_id);
+ 	}
+ 
++        if (use_extrausers) {
++               pw_setdbname (EXTRAUSERS_PASSWD_FILE);
++               spw_setdbname (EXTRAUSERS_SHADOW_FILE);
++               gr_setdbname (EXTRAUSERS_GROUP_FILE);
++               /* TODO expose this information in other tools */
++               sub_uid_setdbname(EXTRAUSERS_SUBUID_FILE);
++               sub_gid_setdbname(EXTRAUSERS_SUBGID_FILE);
++#ifdef SHADOWGRP
++               sgr_setdbname (EXTRAUSERS_SHADOWGROUP_FILE);
++#endif
++        }
++
+ 	/*
+ 	 * Do the hard stuff - open the files, delete the group entries,
+ 	 * then close and update the files.

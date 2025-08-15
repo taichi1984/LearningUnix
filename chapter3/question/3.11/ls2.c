@@ -4,13 +4,19 @@
  * 引数がない場合には、"."、そうでなければ引数のディレクトリに含まれるファイルを出力する。
  *
  */
-#include <dirent.h>
-#include <grp.h>
-#include <pwd.h>
+#include <assert.h>
+#define _POSIX_C_SOURCE 200809L /* st_mtim 等を出すなら最上段に */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <time.h>
+
+#include <dirent.h>    // DIR*, opendir/readdir（使っていれば）
+#include <grp.h>       // getgrgid
+#include <pwd.h>       // getpwuid
+#include <sys/stat.h>  // struct stat
+#include <sys/types.h> // mode_t, uid_t, gid_t
+#include <time.h>      // struct timespec, localtime, strftime
+#include <unistd.h>    // close など（必要なら）
 
 void showtime(struct timespec *time);
 void mode_to_letter(mode_t mode, char str[]);
@@ -23,7 +29,7 @@ int main(int ac, char *av[]) {
     do_ls(".");
   } else {
     while (--ac) {
-      printf("%s:\n ", *++av);
+      printf("%s:\n", *++av);
       do_ls(*av);
     }
   }
@@ -37,12 +43,18 @@ void do_ls(char dirname[])
 {
   DIR *dir_ptr;
   struct dirent *direntp;
+  char buf[256];
 
   if ((dir_ptr = opendir(dirname)) == NULL)
     fprintf(stderr, "ls1: cannot open %s \n", dirname);
   else {
     while ((direntp = readdir(dir_ptr)) != NULL) {
-      showstats(direntp->d_name);
+      if (direntp->d_name[0] == '.')
+        continue;
+      strcpy(buf, dirname);
+      strcat(buf, "/");
+      strcat(buf, direntp->d_name);
+      showstats(buf);
       printf("\n");
     }
     closedir(dir_ptr);
@@ -62,7 +74,7 @@ void showstats(char *filename) {
     printf("%10s ", gid_to_name(bufp->st_gid));
     printf("%10ld bytes   ", bufp->st_size);
     showtime(&bufp->st_mtim);
-    printf("%20s ", filename);
+    printf("%20s ", strrchr(filename, '/') + 1);
   } else {
     printf("Can't stat %s ", filename);
   }

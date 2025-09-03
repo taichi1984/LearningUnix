@@ -224,4 +224,76 @@ struct group {
 };
 ```
 
+## int atoi(const char *nptr);
+文字列を数値に変換する。
+
+### 形式
+```
+#include <stdlib.h>
+
+int atoi(const char *nptr);
+```
+
+### 引数
+*nptr : 数字列を含むヌル終端文字列へのポインタ。
+先頭に空白文字、タブ、改行などがあれば無視される。
+そのあとに + または- があれば富豪として解釈される。
+続く文字が数字'0'～'9'であれば、順に数値に変換
+数字以外が出たところで変換を打ち切る。
+
+### 戻り値
+変換したint値を返す。
+変換できなかった場合は0を返す。
+
+## int isdigit
+与えられた文字が、数字であるかを判定する。
+### 形式
+```
+#include <ctype.h>
+
+int isdigit(int c);
+```
+
+### 引数
+c : unsinged char に変換可能な値、または特殊値EOF
+通常は(unsinged char)にキャストして渡す。
+文字の内容が数字かどうかを確認する。
+
+
+### 戻り値
+0以外 : 真
+0 : 偽
+
+## futimens 関数
+openなどでfdを取得しているファイルのatimeとmtimeを書き換える。
+
+### 形式
+```
+#include<sys/stat.h>
+
+int futimens(int fd , const struct timespec times[2]);
+
+```
+
+### 引数
+fd : 時刻を変更したいファイルのファイルディスクリプタ。
+読み書き用にオープンされている必要がある。
+
+times : struct timespecの配列で要素数は2。
+times[0]　... atime(最終アクセス時刻)
+times[1] ... mtime(最終修正時刻)
+timesがNULLの場合は両方を現在時刻に設定する。
+各要素のtv_nsecに特殊値を設定できる。
+ UTIME_NOW  : 現在時刻にする。
+ UTIME_OMIT : そのフィールドは変更しない。
+
+### 戻り値
+成功時 ... 0
+失敗時 ... -1を返し、errnoにエラー内容が設定される。
+
+### 振る舞い
+ファイルのatimeとmtimeを直接設定する関数。
+実装としてはLinuxではutimensat(fd , NULL, times , 0)を呼んでいる。
+ctime(状態変更時刻)はシステムが自動で更新するため、ユーザーは設定できない。
+
 

@@ -51,4 +51,42 @@ arg       ... 処理で必要とされる任意個の引数
 0  ... 成功したとき
 
 
+## mknod システムコール
+指定されたpathnameに新しいInodeを作成する。
+modeに応じて、そのi-nodeを通常ファイル、FIFO、キャラクタデバイス、ブロックデバイスにする。
+デバイスファイルの場合は、st_rdevフィールドにdevの値が格納される。
+
+### 書式
+```
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+int mknod(const char *pathname, mode_t mode, dev_t dev);
+
+```
+
+### 引数
+- pathname
+作成するファイルのパス名。通常は /dev/...以下になる。
+
+- mode
+ファイルタイプ+パーミッションビットを含む。
+ファイルタイプは以下のいずれかになる。
+```
+S_IFREG : 通常ファイル
+S_IFIFO : FIFO（名前付きパイプ）
+S_IFCHR : キャラクタデバイスファイル
+S_IFBLK : ブロックデバイスファイル
+```
+
+- dev 
+デバイスID　(major/minorをエンコードした値)
+キャラクタ/ブロックデバイスのときだけ有効。
+makedev(major,minor)マクロを使って作るのが定石。
+
+### 返り値
+成功で0、失敗して-1
+
+
 

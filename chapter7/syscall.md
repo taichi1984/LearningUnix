@@ -69,4 +69,22 @@ prevacation --- 元のアクションの記述を受け取る構造体ポイン�
 -1  --- エラー時
 0   --- 成功したとき
 
+## sigprocmaskシステムコール
+現在のシグナルマスクを変更する
+
+### include
+#include<signal.h>
+
+### 書式
+int res = sigprocmask(int how, const sigset_t *sigs, sigset_t * prev);
+
+### 引数
+how --- シグナルマスクをどのように変更するか
+sigs --- 使おうとしているシグナルのリストを指すポインタ
+prev --- もとのシグナルマスクのリストを指すポインタ(またはNULL)
+
+### 戻り値
+-1 --- エラーのとき
+ 0 --- 成功したとき
+
 

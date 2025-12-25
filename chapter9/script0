@@ -1,0 +1,8 @@
+# script0という名前で、複数のコマンドを実行する。
+
+ls
+echo the current date/time is
+date
+echo my name is
+whoami
+

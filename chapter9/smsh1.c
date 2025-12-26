@@ -2,13 +2,14 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #define DFL_PROMPT "> "
 int main() {
   char *cmdline, *prompt, **arglist;
   int result;
-
+  char *end;
   void setup();
 
   prompt = DFL_PROMPT;
@@ -16,6 +17,23 @@ int main() {
 
   while ((cmdline = next_cmd(prompt, stdin)) != NULL) {
     if ((arglist = splitline(cmdline)) != NULL) {
+      if (strcmp(arglist[0], "exit") == 0) {
+        int status = 0;
+        if (arglist[1] != NULL) {
+          char *end;
+          long v;
+
+          int errno = 0;
+          v = strtol(arglist[1], &end, 10);
+
+          if (errno != 0 || *end != '\0') {
+            fprintf(stderr, "exit: numeric argument required\n");
+            continue;
+          }
+          status = (int)v;
+        }
+        exit(status);
+      }
       result = execute(arglist);
       freelist(arglist);
     }

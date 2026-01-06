@@ -11,6 +11,6 @@ void *erealloc(void * , size_t);
 int execute(char **);
 void fatal(char *,char * ,int);
 
-int process();
+int process(char **args);
 
 

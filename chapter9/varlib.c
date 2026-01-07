@@ -1,0 +1,141 @@
+/*
+ * varlib.c
+ *
+ * name = value の対を格納するかんたんな記憶管理システム
+ * 項目が環境の一部かどうかを示すマークをサポートする。
+ *
+ * インターフェース：
+ * VLstore(name,value) OKなら１、そうでなければ0を返す。
+ * VLlookup(name) 文字列を返す。含まれていなければNULLを返す。
+ * VLlist() 現在のテーブルを出力する。
+ *
+ * 環境関連関数
+ * VLexport(name) 環境変数リストに名前を追加する。
+ * VLtable2environ() テーブルから環境にコピー
+ * VLenviron2table()　環境からテーブルにコピー
+ *
+ * 詳細:テーブルは、グローバルかどうかを示すフラグと、name=valueという形式の
+ *      単一の文字列を含む構造体の配列という形で格納される。
+ *      こうすると、環境への追加が楽になる。
+ *      "name = " を探す限り、検索もかんたんになる。
+ */
+
+#include "varlib.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAXVARS 200
+
+struct var {
+  char *str;
+  int global;
+};
+
+static char *new_string(char *, char *); /* 非公開関数*/
+static struct var *find_item(char *, int);
+
+static struct var tab[MAXVARS];
+
+int VLstore(char *name, char *val)
+/*
+ * リストをたどり、名前が見つかったら値を交換する。
+ * 見つからなければ末尾に追加する。
+ * 削除がないので、空の項目はフリーな項目である。
+ * 問題があれば１，OKであれば0を返す
+ */
+{
+  struct var *itemp;
+  char *s;
+  int rv = 1;
+
+  /* 配置できそうなところを探し、新しい文字列を作る*/
+  if ((itemp = find_item(name, 1)) != NULL &&
+      (s = new_string(name, val)) != NULL) {
+    if (itemp->str)
+      free(itemp->str);
+    itemp->str = s;
+    rv = 0;
+  }
+  return rv;
+}
+char *new_string(char *name, char *val)
+/*
+ * name=valueの形式の新文字列を返す。エラーのときはNULLを返す。
+ */
+{
+  char *retval;
+  retval = malloc(strlen(name) + strlen(val) + 2);
+  if (retval != NULL)
+    sprintf(retval, "%s=%s", name, val);
+  return retval;
+}
+
+char *VLlookup(char *name)
+/*
+ * varの値を返す。値がなければ空文字列を返す。
+ */
+{
+  struct var *itemp;
+
+  if ((itemp = find_item(name, 0)) != NULL)
+    return itemp->str + 1 + strlen(name);
+  return "";
+}
+
+int VLexport(char *name)
+/*
+ * varにエキスポート必要のあるマークをつける。その名前の変数がなければ、追加する。
+ * 問題があれば１，OKであれば0を返す。
+ */
+{
+  struct var *itemp;
+  int rv = 1;
+
+  if ((itemp = find_item(name, 0)) != NULL) {
+    itemp->global = 1;
+    rv = 0;
+  } else if (VLstore(name, "") == 1)
+    rv = VLexport(name);
+  return rv;
+}
+
+static struct var *find_item(char *name, int first_blank)
+/*
+ * テーブルから項目を探す
+ * 構造体ポインタを返す
+ * 項目が見つからない場合、first_blankが０でなければ最初の空項目を指すポインタを返し、
+ * そうでなければNULLを返す
+ */
+{
+  int i;
+  int len = strlen(name);
+  char *s;
+
+  for (i = 0; i < MAXVARS && tab[i].str != NULL; i++) {
+    s = tab[i].str;
+    if (strncmp(s, name, len) == 0 && s[len] == '=') {
+      return &tab[i];
+    }
+  }
+
+  if (i < MAXVARS && first_blank)
+    return &tab[i];
+  return NULL;
+}
+
+void VLlist()
+/*
+ * シェルのsetコマンドを実行する
+ * 変数テーブルの内容リストを表示する。
+ * このとき、エキスポートされる変数には、'*'記号を追加する
+ */
+{
+  int i;
+  for (i = 0; i < MAXVARS && tab[i].str != NULL; i++) {
+    if (tab[i].global)
+      printf(" * %s\n", tab[i].str);
+    else
+      printf("   %s\n", tab[i].str);
+  }
+}

@@ -65,9 +65,7 @@ char *new_string(char *name, char *val)
  */
 {
   char *retval;
-  retval = malloc(strlen(name) + strlen(val) + 2);
-  if (retval != NULL)
-    sprintf(retval, "%s=%s", name, val);
+  retval = malloc(strlen(name) + strlen(val) + 2); if (retval != NULL) sprintf(retval, "%s=%s", name, val);
   return retval;
 }
 
@@ -138,4 +136,57 @@ void VLlist()
     else
       printf("   %s\n", tab[i].str);
   }
+}
+
+int VLenviron2table(char *env[])
+/*
+ * 環境の文字列配列をロードして変数テーブルを初期化する。
+ * OKなら１、そうでなければ0を返す。
+ */
+{
+  int i;
+  char *newstring;
+
+  for (i = 0; env[i] != NULL; i++) {
+    if (i == MAXVARS)
+      return 0;
+    newstring = malloc(1 + strlen(env[i]));
+    if (newstring == NULL)
+      return 0;
+    strcpy(newstring, env[i]);
+    tab[i].str = newstring;
+    tab[i].global = 0;
+  }
+  return 1;
+}
+
+char **VLtable2environ()
+/*
+ *  新しい環境として使えるポインタ配列を構築する
+ *　注意：メモリリークを避けるために、不要になったら開放する必要がある。
+ */
+{
+  int i, j, n = 0;
+  char **envtab;
+
+  /*
+   *  まず、グローバル変数の数を数える。
+   */
+
+  for (i = 0; i < MAXVARS && tab[i].str != NULL; i++)
+    if (tab[i].global == 1)
+      n++;
+
+  /* 次に、その数の変数を確保できるだけの空間を確保する*/
+
+  envtab = (char **)malloc((n + 1) * sizeof(char *));
+  if (envtab == NULL)
+    return NULL;
+
+  /* 次に、配列にポインタをロードする */
+  for (i = 0, j = 0; i < MAXVARS && tab[i].str != NULL; i++)
+    if (tab[i].global == 1)
+      envtab[j++] = tab[i].str;
+  envtab[j] = NULL;
+  return envtab;
 }

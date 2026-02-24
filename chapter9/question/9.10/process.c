@@ -10,6 +10,7 @@
 
 #include "controlflow.h"
 #include "loopflow.h"
+#include "parser.h"
 #include "smsh.h"
 #include "stmt.h"
 #include <stdio.h>
@@ -27,25 +28,8 @@ int process(char **args)
  * エラー: サブルーチンで処理されたものが上がってくる。
  */
 {
-  int rv = 0;
-
-  if (args[0] == NULL)
-    return 0;
-
-  if (strcmp(args[0], "while") == 0) {
-    while_block wb;
-    parse_while_block(&wb, args);
-    exec_while_block(&wb);
-  }
-
-  if (strcmp(args[0], "if") == 0) {
-    if_block ifb;
-    parse_if_block(&ifb, args);
-    exec_if_block(&ifb);
-  }
-
-  else {
-    rv = execute(args);
-  }
+  stmt *s = parse_statement(args);
+  int rv = exec_stmt(s);
+  free_stmt(s);
   return rv;
 }

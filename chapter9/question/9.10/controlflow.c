@@ -18,7 +18,7 @@ enum states {
   ELSE_BLOCK,
 };
 
-int syn_err(char *, int if_state);
+static int syn_err(char *msg, int if_state);
 int exec_if_block(if_block *ifb);
 
 int exec_if_block(if_block *ifb) {
@@ -138,7 +138,7 @@ char **parse_if_block(if_block *ifb, char **args)
   return arglist;
 }
 
-int syn_err(char *msg, int if_state)
+static int syn_err(char *msg, int if_state)
 /* 目的:制御構造内の構文エラーを処理する。
  *  詳細:状態をNEUTRALにリセットする。
  *  戻り値: 対話的モードなら1、スクリプト内では、fatal呼び出しになる。

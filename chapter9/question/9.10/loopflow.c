@@ -12,7 +12,7 @@ enum states {
   DO_BLOCK,
 };
 
-int syn_err(char *, int while_state);
+static int syn_err(char *, int while_state);
 
 char **parse_while_block(while_block *wb, char **args)
 /*
@@ -39,7 +39,7 @@ char **parse_while_block(while_block *wb, char **args)
       }
       while_state = WHILE_BLOCK;
 
-      stmt s = (stmt){.type = STMT_CMD, .cmd = &arglist[1]};
+      stmt s = (stmt){.type = STMT_CMD, .cmd = copy_cmd(&arglist[1])};
       stmt_push(&wb->while_part, s);
 
     } else if (strcmp(arglist[0], "do") == 0) {
@@ -60,7 +60,7 @@ char **parse_while_block(while_block *wb, char **args)
       }
     } else {
       if (while_state == DO_BLOCK) {
-        stmt s = (stmt){.type = STMT_CMD, .cmd = arglist};
+        stmt s = (stmt){.type = STMT_CMD, .cmd = copy_cmd(arglist)};
         stmt_push(&wb->do_part, s);
       }
     }
@@ -75,9 +75,17 @@ char **parse_while_block(while_block *wb, char **args)
   return arglist;
 }
 
-int exec_while_block(while_block *blk) { return 0; }
+int exec_while_block(while_block *blk) {
+  int status = 0;
 
-int syn_err(char *msg, int while_state)
+  while (exec_block(&blk->while_part) == 0) {
+    status = exec_block(&blk->do_part);
+  }
+
+  return status;
+}
+
+static int syn_err(char *msg, int while_state)
 /* 目的:制御構造内の構文エラーを処理する。
  *  詳細:状態をNEUTRALにリセットする。
  *  戻り値: 対話的モードなら1、スクリプト内では、fatal呼び出しになる。

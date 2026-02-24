@@ -23,7 +23,10 @@ typedef struct {
 
 
 void stmt_block_init(stmt_block *blk);
+void free_stmt(stmt *s);
 int stmt_push(stmt_block *blk, stmt s);
 int exec_block(stmt_block *blk); 
+int exec_stmt(stmt *s);
+char **copy_cmd(char **src);
 
 #endif

@@ -1,0 +1,143 @@
+# プログラミング課題11.7
+## 課題内容
+あなたのシェルに-cオプションを追加しなさい。どのような変更を加えなければならないか。
+
+## シェルの-cオプションとはなにか
+bashのmanページを参照したところ、以下のような記載があった。
+
+```
+-c string -c  オプションが指定されると、コマンドが string から読み込まれます。
+              string の後に引き数があれば、これらは 位置パラメータ (positional parameter: $0 から始まるパラメータ) に代入されます。
+```
+
+-c オプションをつけた場合は、bashを対話型で起動するのではなく、引数からコマンドを受取り実行する仕組みになる。
+
+## 第１案
+fork,execを自分でやって実装する方法も考えられるが、今回の内容であれば、popenを用いて、簡単に実装できる。
+11.06で学んだオプション処理の方法と分岐方法を考えて、実際に実装してみよう。
+
+## 実装コードと実行結果
+今回は自作シェルの各モジュールは省略。メインのsmsh2.cのファイル内に-c時の動きをする関数とオプション周りの分岐を作成している。
+実際は-cの動きをするときの挙動は別のファイルに書くべきかもしれないが、課題の要点の読み取りやすさを重視し、上記の方法をとっている。
+
+### コード
+```
+#include "smsh.h"
+#include <getopt.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define DFL_PROMPT "> "
+
+typedef struct {
+  bool flag_c;
+} Option;
+
+int exec_by_string(char *command);
+
+int main(int ac, char *av[]) {
+  char *cmdline, *prompt, **arglist;
+  int result, process(char **);
+  char *end;
+  void setup();
+
+  prompt = DFL_PROMPT;
+  setup();
+
+  Option opt;
+  int c;
+
+  while ((c = getopt(ac, av, "c")) != -1) {
+    switch (c) {
+    case 'c':
+      opt.flag_c = true;
+      break;
+    case '?':
+      exit(1);
+      break;
+    }
+  }
+
+  if (opt.flag_c) {
+    exec_by_string(av[optind]);
+  } else {
+    while ((cmdline = next_cmd(prompt, stdin)) != NULL) {
+      if ((arglist = splitline(cmdline)) != NULL) {
+        result = process(arglist);
+        freelist(arglist);
+      }
+      free(cmdline);
+    }
+  }
+  return 0;
+}
+
+int exec_by_string(char *command) {
+
+  FILE *fp;
+  char buf[BUFSIZ];
+
+  if ((fp = popen(command, "r")) == NULL) {
+    perror("popen");
+    return(-1);
+  }
+
+  while (fgets(buf, sizeof(buf), fp) != NULL) {
+    printf("%s", buf);
+  }
+  pclose(fp);
+
+  return 0;
+
+}
+
+void setup()
+/*
+ * 目的:シェルの初期化
+ * 戻り値：なし、トラブルが起きたらfatal()を呼び出す。
+ */
+{
+  signal(SIGINT, SIG_IGN);
+  signal(SIGQUIT, SIG_IGN);
+}
+
+void fatal(char *s1, char *s2, int n) {
+  fprintf(stderr, "Error: %s,%s\n", s1, s2);
+  exit(n);
+}
+```
+
+要点はmain()関数内のオプション処理と、オプションごとの分岐処理の追加と
+exec_by_string()関数の追加になる。
+
+### 実行結果
+```
+$ ./smsh2 -c "ls -l"
+合計 96
+-rw-rw-r-- 1 taichi84 taichi84  9352  4月  5 09:47 9.10.md
+-rw-rw-r-- 1 taichi84 taichi84  3948  4月  5 09:12 controlflow.c
+-rw-rw-r-- 1 taichi84 taichi84   268  4月  5 09:12 controlflow.h
+-rw-rw-r-- 1 taichi84 taichi84   815  4月  5 09:12 execute.c
+-rw-rw-r-- 1 taichi84 taichi84  2373  4月  5 09:12 loopflow.c
+-rw-rw-r-- 1 taichi84 taichi84   254  4月  5 09:12 loopflow.h
+-rw-rw-r-- 1 taichi84 taichi84   795  4月  5 09:12 parser.c
+-rw-rw-r-- 1 taichi84 taichi84    98  4月  5 09:12 parser.h
+-rw-rw-r-- 1 taichi84 taichi84  1009  4月  5 09:12 process.c
+-rw-rw-r-- 1 taichi84 taichi84   287  4月  5 09:12 smsh.h
+-rwxrwxr-x 1 taichi84 taichi84 22192  4月  5 10:05 smsh2
+-rw-rw-r-- 1 taichi84 taichi84  1458  4月  5 10:05 smsh2.c
+-rw-rw-r-- 1 taichi84 taichi84  3512  4月  5 09:12 splitline.c
+-rw-rw-r-- 1 taichi84 taichi84  2570  4月  5 09:12 stmt.c
+-rw-rw-r-- 1 taichi84 taichi84   527  4月  5 09:12 stmt.h
+-rw-rw-r-- 1 taichi84 taichi84   170  4月  5 09:12 testsentence
+-rw-rw-r-- 1 taichi84 taichi84   177  4月  5 09:12 testsentence2
+```
+
+問題なく実行できているようだ。
+
+## このやり方の問題点
+

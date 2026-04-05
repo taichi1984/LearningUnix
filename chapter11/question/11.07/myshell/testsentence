@@ -1,0 +1,13 @@
+if ls
+then
+  echo "this is outer then "
+  if ls ../
+  then
+    echo "this is inner then"
+  else
+    echo "this is inner else"
+  fi
+else
+echo "this is else statement"
+fi
+

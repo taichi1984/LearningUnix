@@ -1,0 +1,6 @@
+$ telnet 192.168.0.7 13000
+Trying 192.168.0.7...
+Connected to 192.168.0.7.
+Escape character is '^]'.
+The time here is ...Thu Apr  9 10:33:25 2026
+Connection closed by foreign host.

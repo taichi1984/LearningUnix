@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define PORTNUM 79
+#define PORTNUM 7979
 #define HOSTLEN 256
 int setup_server(int port);
 

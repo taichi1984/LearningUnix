@@ -54,7 +54,8 @@ void parent_code(int childpid) {
     printf("waiting..\n");
     sleep(1);
   }
-  wait_rv = waitpid(childpid, &child_status, 0);
+
+  wait_rv = waitpid(-1, &child_status, WNOHANG);
 
   printf("done waiting for %d. Wait returned : %d\n", childpid, wait_rv);
 
